@@ -1,0 +1,63 @@
+---
+title: "Exploratory Data Analysis & Data Wrangling"
+output: html_notebook
+---
+
+```{r, include=FALSE}
+#import libraries
+library(tidyverse)
+library(fredr)
+```
+
+# Getting the Data 
+
+```{r}
+fredr_set_key('07d43cd27b8d103658e01cf077124b24')
+```
+
+```{r}
+fredr(
+  series_id = "M2SL")
+) -> m2_sa #M2 monetarni agregat
+
+fredr(
+  series_id = 'MSPUS'
+) -> median_house_price_nsa 
+
+fredr(
+  series_id = 'USSTHPI'
+) -> house_price_index_nsa
+
+fredr(
+  series_id = 'WPU159402'
+) -> jwlr_ppi_nsa #kompozitni index cen au, ag, pt
+
+fredr(
+  series_id = 'CSUSHPISA'
+) -> sp500_sa 
+
+fredr(
+  series_id = 'LES1252881600Q'
+) -> wag_median_sa #median wage
+
+fredr(
+  series_id = 'GNPC96'
+) -> gnp_sa
+
+fredr(
+  series_id = 'MORTGAGE30US'
+) -> mtg_30_nsa
+
+fredr(
+  series_id = 'MSACSR'
+) -> hs_sale-sold_sa #houses for sale/houses sold
+
+fredr(
+  series_id = 'CPIAUCSL'
+) -> cpi_sa
+
+```
+
+```{r}
+indices_list <- list(ls)
+```
