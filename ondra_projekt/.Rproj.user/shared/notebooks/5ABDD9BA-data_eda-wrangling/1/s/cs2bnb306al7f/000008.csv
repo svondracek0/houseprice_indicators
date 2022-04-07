@@ -1,9 +1,0 @@
-"0","fredr(
-  sereis_id = 'GNPC96'
-) -> gnp_sa
-"
-"2","Error: `...` is not empty.
-These dots only exist to allow for future extensions, and should be empty.
-Did you misspecify an argument?
-[90mRun `rlang::last_error()` to see where the error occurred.[39m
-"
