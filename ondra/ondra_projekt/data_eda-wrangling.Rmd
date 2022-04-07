@@ -1,0 +1,129 @@
+---
+title: "Exploratory Data Analysis & Data Wrangling"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r, include=FALSE}
+#import libraries
+library(tidyverse)
+library(fredr)
+```
+
+# Getting the Data
+
+```{r}
+fredr_set_key('07d43cd27b8d103658e01cf077124b24')
+```
+
+```{r}
+fredr(
+  series_id = "M2SL") -> m2_sa #M2 monetarni agregat
+
+fredr(
+  series_id = 'MSPUS'
+) -> median_house_price_nsa 
+
+fredr(
+  series_id = 'USSTHPI'
+) -> house_price_index_nsa
+
+fredr(
+  series_id = 'WPU159402'
+) -> jwlr_ppi_nsa #kompozitni index cen au, ag, pt
+
+fredr(
+  series_id = 'CSUSHPISA'
+) -> sp500_sa 
+
+fredr(
+  series_id = 'LES1252881600Q'
+) -> wag_median_sa #median wage
+
+fredr(
+  series_id = 'GNPC96'
+) -> gnp_sa
+
+fredr(
+  series_id = 'MORTGAGE30US'
+) -> mtg_30_nsa
+
+fredr(
+  series_id = 'MSACSR') -> hs_sale_sold_sa #houses for sale/houses sold
+
+fredr(
+  series_id = 'CPIAUCSL'
+) -> cpi_sa
+
+```
+
+```{r, include=FALSE}
+macro_indices <-list(
+  cpi_sa,
+  gnp_sa,
+  house_pice_nsa,
+  house_price_index_nsa,
+  jwlr_ppi_nsa,
+  m2_sa,
+  median_house_price_nsa,
+  mtg_30_nsa,
+  sp500_sa,
+  wag_median_sa,
+  hs_sale_sold_sa
+)
+
+```
+
+```{r, include=FALSE}
+rename_fn <- function(dframe, col_id, name_id){
+  names(dframe)[col_id] = dframe[1,name_id]
+  return(dframe)
+}
+  
+```
+
+```{r, include=FALSE}
+rename_fn(cpi_sa, 3, 2)
+```
+
+```{r, include=FALSE}
+tidy_data <- function(dframe){
+  dframe %>% select(., -c('series_id', 'realtime_start', 'realtime_end')) -> dframe
+  return(dframe)
+}
+```
+
+```{r, include=FALSE}
+macro_indices %>% 
+  map(., ~rename_fn(., 3, 2)) -> indices_renamed
+
+indices_renamed %>% 
+  map(., ~ tidy_data(.)) -> indices_renamed
+```
+
+```{r, include=FALSE}
+plyr::join_all(indices_renamed, by = 'date', type = 'full') -> df_indices
+```
+
+```{r}
+df_indices %>% 
+  ggplot(data = .,
+         aes(x = date)) + 
+  geom_point(aes(y = MSPUS, color = 'median house price')) +
+  geom_point(aes(y = CPIAUCSL, color = 'cpi')) +
+  geom_point(aes(y = GNPC96, color = 'GNP')) +
+  geom_point(aes(y = USSTHPI, color = 'HousePrice index')) +
+  geom_point(aes(y = WPU159402, color = 'MetalsPrice index')) +
+  geom_point(aes(y = M2SL, color = 'M2 Aggr.')) + 
+  geom_point(aes(y = MORTGAGE30US, color = 'Mortgaege30Y rate')) +
+  geom_point(aes(y = CSUSHPISA, color = 'S&P500')) + 
+  geom_point(aes(y = LES1252881600Q, color = 'MedWage')) +
+  geom_point(aes(y = MSACSR, color = 'ForsSale/Sold Houses')) +
+  scale_y_log10(name = 'log Value') +
+  ggtitle('MacroVars Composite Plot') +
+  scale_x_date(breaks = scales::breaks_pretty(100)) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))-> plot_composite
+  
+plotly::ggplotly(plot_composite) -> plot_object
+```
