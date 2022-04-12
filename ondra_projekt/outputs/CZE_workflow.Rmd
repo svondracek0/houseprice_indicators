@@ -1,0 +1,155 @@
+---
+title: "Predikce Cen Nemovitostí"
+author: "Ondřej Děcký"
+date: "4/7/2022"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE)
+```
+
+```{r, echo = FALSE}
+#import libraries
+library(tidyverse)
+library(fredr)
+library(plotly)
+library(vars)
+library(DT)
+```
+
+```{r}
+load('ondra_makro_promenne.Rdata')
+```
+
+```{r}
+join_list <- function(list){
+  tbl_res <- list[[1]]
+  for(i in 2:length(list)) tbl_res <- inner_join(tbl_res, list[[i]], by = 'date')
+  return(tbl_res)
+}
+```
+
+```{r}
+tbl_final <- join_list(var_list)
+```
+
+# Tabulka makro-dat
+
+Následující tabulka obsahuje makro-proměnné, tedy zatím neobsahuje dílčí ceny domů, které jsi chtěl v zadání. Jsou to tedy:
+
+-   HDP měřeno v USD
+-   hypoteční sazba pdle ČNB, zdroj <https://www.cnb.cz/cnb/stat.ARADY_PKG.PARAMETRY_SESTAVY?p_strid=AAABAD&p_sestuid=60261&p_lang=CS>
+-   inflace měřená CPI, všchny produkty
+-   mediánová mzda, všechna odvětví
+-   míra nezaměstnanosti, všechna odvětví
+-   index cen rezidenčních nemovitostí
+
+Kromě dat z ČNB pochází ze St.Louis FRED, ten je bere všude možně (OECD, Eurostat), používám protože se z něho jednoduše tahají data.
+
+```{r}
+tbl_final
+```
+
+# Graf proměnných převedených na index se základním rokem 2010
+
+U některých proměnných to moc nemá smysl, zejména u úrokových měr, které se dost skokově mění a zároveň nerostou v absolutních číslech stabilně, jako např. HDP které roste v čase konstantně. Nicméně tu je graf:
+
+```{r}
+tbl_final %>% 
+  mutate(gdp = (gdp/tbl_final$gdp[which(tbl_final$date == '2010-01-01')])*100,
+         inflation = (inflation/tbl_final$inflation[which(tbl_final$date == '2010-01-01')])*100,
+         wage_med = (wage_med/tbl_final$wage_med[which(tbl_final$date == '2010-01-01')])*100,
+         unemp = (unemp/tbl_final$unemp[which(tbl_final$date == '2010-01-01')])*100,
+         hypo = (hypo/tbl_final$hypo[which(tbl_final$date == '2010-01-01')])*100) %>% 
+  drop_na(.) %>% 
+  pivot_longer(data = .,
+               cols = -date,
+               names_to = 'variable',
+               values_to = 'value') %>% 
+  ggplot(data = .,
+         aes(x = date, y = value, color = variable)) + geom_line() +
+  scale_y_continuous(name = 'Index, základ 01/2010 = 100') +
+  ggtitle('Vývoj indexu jednotlivých proměnných') +
+  scale_x_date(date_breaks = '1 years') +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) -> plot_index
+
+
+ggplotly(plot_index)
+
+```
+
+```{r}
+differentiate <- function(x){
+  ser_new = vector(mode = 'numeric', length = length(x))
+  for(i in 2:length(x)) ser_new[i] = x[i] - x[i - 1]
+  return(ser_new)
+}
+```
+
+# Graf temp růstu
+
+Nejsmysluplnější je graf tempa růstu (ten ale má smysl sledovat jen v krátkých obdobích). Pro percentuální proměnné se jedná o jednoduché diference: $x_t^{diff} = x_t - x_{t - 1}$ Pro absolutní proměnné se jedná o tempo růstu.
+
+```{r}
+tbl_final %>% 
+  mutate(gdp = 100*(log(gdp) - lag(log(gdp))),
+         inflation = inflation - lag(inflation),
+         wage_med = wage_med - lag(wage_med),
+         unemp = unemp - lag(unemp),
+         hypo = hypo - lag(hypo),
+         houseprice = houseprice - lag(houseprice)) %>% 
+  drop_na() %>% 
+  pivot_longer(data = .,
+               cols = -date,
+               names_to = 'variable',
+               values_to = 'value') %>% 
+  ggplot(data = .,
+         aes(x = date, y = value, color = variable)) + geom_line() +
+  scale_y_continuous(name = 'Rel. zmena, pct.') +
+  scale_x_date(date_breaks = '1 years',
+               date_minor_breaks = '6 months') +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  ggtitle('Relativni zmeny sledovanych velicin') -> plot_rel_change
+
+ggplotly(plot_rel_change)
+```
+
+# Jednoduchá predikce
+
+Podle mě nemá moc smysl chtít něco vyloženě vyčíst z grafu. Tohle je jednoduchý model založený na vzájemné provázanosti všech proměnných. Nejde totiž říct, že růst jedné proměnné vždy jednoznačně předpoví růst cen nemovitostí, což asi ani nepředpokládáš. Předpověď jsem nastavil na 6 kvartálů dopředu (tak jak jsi chtěl v mailu).
+
+Když se podíváš na jednotlivé proměnné, řádky značí další kvartál v pořadí. Sloupce mají následující význam:
+
+-   fcst je střední hodnota předpovědi
+-   lower je spodní odhad - šance že bude nižší je podle modelu 5%
+-   upper je horní odhad - analogicky vyšší nebude v 95% případů
+-   CI udává celkovou šířku tohoto 90% spolehlivostního intervalu
+
+Ber to samozřejmě všechno s rezervou, pořád mi to ale přijde rozumnější, než na základě grafů chtít něco předpovídat. Až budu mít víc granurální data k cenám nemovitostí, tak ten model ještě upravím trochu.
+
+```{r}
+tbl_final %>% 
+  mutate(gdp = 100*(log(gdp) - lag(log(gdp))),
+         inflation = inflation - lag(inflation),
+         wage_med = wage_med - lag(wage_med),
+         unemp = unemp - lag(unemp),
+         hypo = hypo - lag(hypo),
+         houseprice = houseprice - lag(houseprice)) %>% 
+  drop_na() %>% 
+  dplyr::select(-date) %>% 
+  VAR(y = ., 
+      p = 2,
+      type = 'const',
+      season = NULL,
+      exog = NULL) -> var_model
+
+  predict(var_model, n.ahead = 6, CI = 0.95) -> var_prediction
+  fanchart(var_prediction, main = c('gdp', 'wage_med', 'hypo', 'unemp', 'inflation', 'houseprice'))
+```
+
+```{r}
+var_prediction
+```
