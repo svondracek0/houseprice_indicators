@@ -1,0 +1,46 @@
+---
+title: "Analýza cen nemovitostí v ČR"
+author: "Ondřej Děcký"
+date: "4/19/2022"
+output: html_notebook
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+```{r, output = FALSE, include=FALSE}
+#Data
+load('Ondra_data.Rdata')
+load(')
+```
+
+Začneme pohledem na makroveličiny, které dle mého názoru mají podstatný vliv na to, jakým způsobem se chová trh s nemovitostmi. Data pocházejí z databáze ČSÚ a ČNB. Uvádí je následující tabulka:
+
+```{r}
+makrodata
+```
+## Jedná se tedy o následující veličiny:  
+
++ HDP měřené indexem spotřebitelských cen, očištěné o inflaci
++ Hypoteční sazba zveřejňovaná ČNB, zdroj:
+https://www.cnb.cz/cnb/STAT.ARADY_PKG.VYSTUP?p_period=1&p_sort=2&p_des=50&p_sestuid=60261&p_uka=1&p_strid=AAABAD&p_od=200401&p_do=202202&p_lang=CS&p_format=2&p_decsep=%2C
++ Míra inflace, měřená v bazických bodech se základním rokem 2010
++ Mediánová mzda, měřená v bazických bodech se základním rokem 2010
++ Míra nezaměstnanosti v procentech
++ Index cen nemovitostí podle House Price Index standardu, základní rok 2010  
+
+Klíčové makroukazatele shrnuje následujícíc graf:
+
+
+
+
+
+
+
+
+
+
+
+

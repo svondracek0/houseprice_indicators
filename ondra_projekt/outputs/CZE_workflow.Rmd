@@ -21,10 +21,11 @@ library(DT)
 ```
 
 ```{r}
-load('ondra_makro_promenne.Rdata')
+load('../data_transakce_CZ/ondra_makro_promenne.Rdata')
+load('../Ondra_data.Rdata')
 ```
 
-```{r}
+```{r, include = FALSE}
 join_list <- function(list){
   tbl_res <- list[[1]]
   for(i in 2:length(list)) tbl_res <- inner_join(tbl_res, list[[i]], by = 'date')
@@ -32,7 +33,7 @@ join_list <- function(list){
 }
 ```
 
-```{r}
+```{r, include = FALSE}
 tbl_final <- join_list(var_list)
 ```
 
@@ -47,7 +48,7 @@ Následující tabulka obsahuje makro-proměnné, tedy zatím neobsahuje dílč�
 -   míra nezaměstnanosti, všechna odvětví
 -   index cen rezidenčních nemovitostí
 
-Kromě dat z ČNB pochází ze St.Louis FRED, ten je bere všude možně (OECD, Eurostat), používám protože se z něho jednoduše tahají data.
+Kromě hypo sazby (ta je z ČNB) pochází data z databáze ČSÚ.
 
 ```{r}
 tbl_final
@@ -55,7 +56,7 @@ tbl_final
 
 # Graf proměnných převedených na index se základním rokem 2010
 
-U některých proměnných to moc nemá smysl, zejména u úrokových měr, které se dost skokově mění a zároveň nerostou v absolutních číslech stabilně, jako např. HDP které roste v čase konstantně. Nicméně tu je graf:
+Následující graf zobrazuje klíčové makroekonomické proměnné s bazickým rokem 2010. 
 
 ```{r}
 tbl_final %>% 
@@ -81,6 +82,10 @@ ggplotly(plot_index)
 
 ```
 
+Tento graf není příliš vypovídající. Abychom mohli lépe posoudit souvislosti mezi 
+veličinami, je vhodné naše veličiny transformovat do podoby jejich procentuální změny:
+
+
 ```{r}
 differentiate <- function(x){
   ser_new = vector(mode = 'numeric', length = length(x))
@@ -90,8 +95,7 @@ differentiate <- function(x){
 ```
 
 # Graf temp růstu
-
-Nejsmysluplnější je graf tempa růstu (ten ale má smysl sledovat jen v krátkých obdobích). Pro percentuální proměnné se jedná o jednoduché diference: $x_t^{diff} = x_t - x_{t - 1}$ Pro absolutní proměnné se jedná o tempo růstu.
+Procentuální změnu pak zobrazuje následující graf:
 
 ```{r}
 tbl_final %>% 
@@ -116,6 +120,19 @@ tbl_final %>%
 
 ggplotly(plot_rel_change)
 ```
+
+
+Dalšími daty, jimiž se budeme zaobírat, jsou data o cenách nemovitostí a o počtu transakcí.
+Data o počtech trnsakcí jsou zveřejňována v 
+
+
+
+
+
+
+
+
+Z výše uvedeného grafu bohužel nelze jednoznačně určit kauzální vztahy, neboť se pohybují vzájemně dost nahodile. Je tomu tak proto, že neexistuje jednoznačná kauzální dráha mezi těmito makroekonomickými veličinami. Z tohoto důvodu považují za vhodné zkonstruovat preikci na 6 kvartálů dopředu, a tu následně vykreslit:
 
 # Jednoduchá predikce
 
@@ -151,5 +168,5 @@ tbl_final %>%
 ```
 
 ```{r}
-var_prediction
+var_prediction$fcst[1]
 ```
